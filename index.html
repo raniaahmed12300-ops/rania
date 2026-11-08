@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>نظام إدارة وتحليل نتائج الطلاب</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f7f6;
+      margin: 20px;
+      color: #333;
+    }
+    h2 {
+      color: #2c3e50;
+      border-bottom: 2px solid #3498db;
+      padding-bottom: 8px;
+      margin-top: 30px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      background: #fff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px 15px;
+      text-align: right;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background-color: #3498db;
+      color: white;
+    }
+    tr:hover {
+      background-color: #f1f1f1;
+    }
+    .status-pass {
+      color: #27ae60;
+      font-weight: bold;
+    }
+    .status-review {
+      color: #e74c3c;
+      font-weight: bold;
+    }
+    .summary-box {
+      background: #e8f4f8;
+      padding: 15px;
+      border-right: 5px solid #3498db;
+      border-radius: 4px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>نظام إدارة وتحليل نتائج الطلاب</h1>
+
+  <h2>تقرير نتائج الطلاب الكامل</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>رقم الطالب</th>
+        <th>اسم الطالب</th>
+        <th>المتوسط</th>
+        <th>التقدير</th>
+        <th>النتيجة</th>
+      </tr>
+    </thead>
+    <tbody id="studentsTable"></tbody>
+  </table>
+
+  <h2>الطلاب المتعثرون بعد إضافة درجات الرأفة</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>اسم الطالب</th>
+        <th>المتوسط الأصلي</th>
+        <th>المتوسط بعد الرأفة (+5)</th>
+      </tr>
+    </thead>
+    <tbody id="strugglingTable"></tbody>
+  </table>
+
+  <div class="summary-box" id="summaryBox"></div>
+
+  <script>
+    // 1. هيكلة بيانات الطالب باستخدام Class & Constructor
+    class Student {
+      constructor(id, name, grades, attendance) {
+        this.id = id;
+        this.name = name;
+        this.grades = grades;         // مصفوفة درجات 3 مواد
+        this.attendance = attendance; // نسبة الحضور
+      }
+
+      // دالة حساب المتوسط باستخدام reduce
+      calculateAverage() {
+        const total = this.grades.reduce((acc, grade) => acc + grade, 0);
+        return total / this.grades.length;
+      }
+
+      // دالة التقدير بالحروف
+      getGradeLetter() {
+        const avg = this.calculateAverage();
+        if (avg >= 90) return 'A';
+        if (avg >= 80) return 'B';
+        if (avg >= 70) return 'C';
+        if (avg >= 60) return 'D';
+        if (avg >= 50) return 'E';
+        return 'F';
+      }
+
+      // دالة النتيجة النهائية
+      getFinalStatus() {
+        const avg = this.calculateAverage();
+        if (avg >= 50 && this.attendance >= 75) {
+          return "ناجح";
+        } else {
+          return "يحتاج مراجعة";
+        }
+      }
+    }
+
+    // 3. نظام تشغيل الجامعة (مصفوفة الكائنات)
+    const studentsList = [
+      new Student(1, "أحمد محمد", [85, 90, 95], 85),
+      new Student(2, "سارة محمود", [45, 42, 48], 80), // متعثرة
+      new Student(3, "علي حسن", [40, 38, 45], 70),    // متعثر
+      new Student(4, "منى السيد", [65, 70, 75], 90)
+    ];
+
+    // 4. لجنة الرأفة (Array Methods)
+    const strugglingStudents = studentsList.filter(student => {
+      const avg = student.calculateAverage();
+      return avg >= 40 && avg <= 49;
+    });
+
+    const updatedStrugglingAverages = strugglingStudents.map(student => {
+      return student.calculateAverage() + 5;
+    });
+
+    const totalUpgraded = updatedStrugglingAverages.reduce((sum, grade) => sum + grade, 0);
+
+    let upgradedAverage = 0;
+    if (strugglingStudents.length > 0) {
+      upgradedAverage = totalUpgraded / strugglingStudents.length;
+    }
+
+    // 5. عرض النتائج على واجهة الصفحة (DOM Manipulation)
+    const studentsTable = document.getElementById("studentsTable");
+    studentsList.forEach(student => {
+      const statusClass = student.getFinalStatus() === "ناجح" ? "status-pass" : "status-review";
+      studentsTable.innerHTML += `
+        <tr>
+          <td>${student.id}</td>
+          <td>${student.name}</td>
+          <td>${student.calculateAverage().toFixed(2)}</td>
+          <td>${student.getGradeLetter()}</td>
+          <td class="${statusClass}">${student.getFinalStatus()}</td>
+        </tr>
+      `;
+    });
+
+    const strugglingTable = document.getElementById("strugglingTable");
+    strugglingStudents.forEach((student, index) => {
+      strugglingTable.innerHTML += `
+        <tr>
+          <td>${student.name}</td>
+          <td>${student.calculateAverage().toFixed(2)}</td>
+          <td>${updatedStrugglingAverages[index].toFixed(2)}</td>
+        </tr>
+      `;
+    });
+
+    document.getElementById("summaryBox").innerText = 
+      `متوسط درجات الطلاب المتعثرين بعد الرأفة: ${upgradedAverage.toFixed(2)}`;
+
+    // 6. المخرجات عبر الـ Console كنسخة احتياطية
+    console.log("=== تقرير نتائج الطلاب الكامل ===");
+    studentsList.forEach(student => {
+      console.log(`الاسم: ${student.name} | المتوسط: ${student.calculateAverage().toFixed(2)} | التقدير: ${student.getGradeLetter()} | النتيجة: ${student.getFinalStatus()}`);
+    });
+  </script>
+
+</body>
+</html>
+
+
